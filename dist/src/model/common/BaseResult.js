@@ -27,3 +27,4 @@ function buildDebug(msg, code = Code_1.CODE.DEBUG, request, response) {
     return new BaseResult(msg, code, request, response);
 }
 exports.buildDebug = buildDebug;
+//# sourceMappingURL=BaseResult.js.map

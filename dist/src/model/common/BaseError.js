@@ -20,3 +20,4 @@ function buildError(msg, code = Code_1.CODE.ERROR, request, response) {
     return new BaseError(msg, code, request, response);
 }
 exports.buildError = buildError;
+//# sourceMappingURL=BaseError.js.map

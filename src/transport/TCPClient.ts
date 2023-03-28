@@ -1,28 +1,29 @@
 import * as Buffer from "buffer";
-import {Socket, TcpSocketConnectOpts} from "net";
 import * as net from "net";
-export class TCPClient {
+import EventEmitter from "events";
+import {Socket, TcpSocketConnectOpts} from "net";
+export class TCPClient extends EventEmitter{
   public socket: Socket | undefined;
   public options: TcpSocketConnectOpts;
   public connectionListener: () => void;
   private forceClosed: boolean;
-  constructor(options: TcpSocketConnectOpts, connectionListener: () => void) {
+  constructor(options: TcpSocketConnectOpts, connectionListener?: () => void) {
+    super();
     this.options = options;
     this.forceClosed = false;
-    this.connectionListener = connectionListener;
+    this.connectionListener = connectionListener || (() => {});
   }
-  async open(restart: boolean) {
+  async open(restart?: boolean) {
     this.socket = net.createConnection(this.options, this.connectionListener);
     return new Promise((resolve, reject) => {
       this.socket?.on("connect", () => {
-        console.log(this.socket);
         resolve(`a socket ${this.options.host}:${this.options.port} connection is successfully established`);
       });
       this.socket?.on("close", (hadError: boolean) => {
         console.log("if the socket was closed due to a transmission error", hadError);
       });
       this.socket?.on("data", (data: Buffer | string) => {
-        console.log("receive buffer or string from the end of opposite",data);
+        this.emit("data", data);
       });
       this.socket?.on("drain", () => {
         console.log("the writer buffer becomes empty");
@@ -32,7 +33,6 @@ export class TCPClient {
         if(!restart) {
           reject();
         } else {
-
         }
       });
       this.socket?.once("error", (error) => {
@@ -48,6 +48,9 @@ export class TCPClient {
         console.log("if the socket times out from inactivity, this is only to notify that the socket has been idle. The user must manually close the connection");
       });
     })
+  }
+  send(data: string | Buffer | Uint8Array) {
+    this.socket?.write(data);
   }
   close(noForceClosed: boolean) {
     this.forceClosed = !noForceClosed;

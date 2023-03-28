@@ -31,14 +31,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TCPClient = void 0;
 const net = __importStar(require("net"));
-class TCPClient {
+const events_1 = __importDefault(require("events"));
+class TCPClient extends events_1.default {
     constructor(options, connectionListener) {
+        super();
         this.options = options;
         this.forceClosed = false;
-        this.connectionListener = connectionListener;
+        this.connectionListener = connectionListener || (() => { });
     }
     open(restart) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -46,14 +51,13 @@ class TCPClient {
             return new Promise((resolve, reject) => {
                 var _a, _b, _c, _d, _e, _f, _g, _h, _j;
                 (_a = this.socket) === null || _a === void 0 ? void 0 : _a.on("connect", () => {
-                    console.log(this.socket);
                     resolve(`a socket ${this.options.host}:${this.options.port} connection is successfully established`);
                 });
                 (_b = this.socket) === null || _b === void 0 ? void 0 : _b.on("close", (hadError) => {
                     console.log("if the socket was closed due to a transmission error", hadError);
                 });
                 (_c = this.socket) === null || _c === void 0 ? void 0 : _c.on("data", (data) => {
-                    console.log("receive buffer or string from the end of opposite", data);
+                    this.emit("data", data);
                 });
                 (_d = this.socket) === null || _d === void 0 ? void 0 : _d.on("drain", () => {
                     console.log("the writer buffer becomes empty");
@@ -81,6 +85,10 @@ class TCPClient {
             });
         });
     }
+    send(data) {
+        var _a;
+        (_a = this.socket) === null || _a === void 0 ? void 0 : _a.write(data);
+    }
     close(noForceClosed) {
         var _a, _b;
         this.forceClosed = !noForceClosed;
@@ -90,3 +98,4 @@ class TCPClient {
     }
 }
 exports.TCPClient = TCPClient;
+//# sourceMappingURL=TCPClient.js.map
