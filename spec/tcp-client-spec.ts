@@ -22,6 +22,7 @@ describe("Test fro RTSP", () => {
     }
     console.log(rtsp.sdp);
     await rtsp.SETUP();
+    await rtsp.PLAY();
     await new Promise(res => setTimeout(res, 30000));
     console.log("30s");
   })

@@ -48,6 +48,10 @@ export class HttpResponse extends HttpBase {
     if(this.httpResponseOptions)
       return this.httpResponseOptions.headers["CSeq"];
   }
+  get code() {
+    if(this.httpResponseOptions)
+      return this.httpResponseOptions.line.code;
+  }
   get line() {
     if(this.httpResponseOptions)
       return this.httpResponseOptions.line;
@@ -55,6 +59,10 @@ export class HttpResponse extends HttpBase {
   get headers() {
     if(this.httpResponseOptions)
       return this.httpResponseOptions.headers;
+  }
+  get methods() {
+    const methods = this.headers && this.headers["Public"];
+    return methods?.split(/,\s*/);
   }
   get body() {
     if(this.httpResponseOptions.body)
@@ -88,7 +96,7 @@ export class HttpResponse extends HttpBase {
     const { message, code, protocol } = line;
     const requestLine = `${protocol} ${code} ${message}\r\n`;
     const requestHeader = Object.keys(headers).reduce((pre,current,index, arr) => {
-      return pre += `${current}:${headers[current]}\r\n`;
+      return pre += current && headers[current] ? `${current}:${headers[current]}\r\n` : "";
     }, "");
     return `${requestLine}${requestHeader}${body}`;
   }

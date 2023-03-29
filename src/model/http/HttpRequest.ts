@@ -48,6 +48,10 @@ export class HttpRequest extends HttpBase {
     if(this.httpRequestOptions.headers)
       return this.httpRequestOptions.headers;
   }
+  get cseq() {
+    if(this.httpRequestOptions.headers)
+      return this.httpRequestOptions.headers["CSeq"];
+  }
   get body() {
     if(this.httpRequestOptions.body)
       return this.httpRequestOptions.body;
@@ -80,7 +84,7 @@ export class HttpRequest extends HttpBase {
     const { method, path, protocol } = line;
     const requestLine = `${method} ${path} ${protocol}\r\n`;
     const requestHeader = Object.keys(headers).reduce((pre,current,index, arr) => {
-      return pre += `${current}: ${headers[current]}\r\n`;
+      return pre += current && headers[current] ? `${current}: ${headers[current]}\r\n` : "";
     }, "");
     if(body) {
       return `${requestLine}${requestHeader}${body}\r\n`;

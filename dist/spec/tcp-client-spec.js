@@ -34,6 +34,7 @@ describe("Test fro RTSP", () => {
         }
         console.log(rtsp.sdp);
         yield rtsp.SETUP();
+        yield rtsp.PLAY();
         yield new Promise(res => setTimeout(res, 30000));
         console.log("30s");
     }));

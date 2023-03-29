@@ -137,7 +137,8 @@ class RTSP {
                 },
                 headers: {
                     "CSeq": ++this.cseq,
-                    "Transport": "RTP/AVP;unicast;client_port=3056-3057",
+                    // "Transport": "RTP/AVP/UDP;unicast;client_port=3056-3057",
+                    "Transport": "RTP/AVP/TCP;unicast;interleaved=0-1",
                     "User-Agent": this.userAgent,
                     "Authorization": `Basic ${(0, buffer_1.btoa)("admin:able1234")}`
                 }
@@ -147,10 +148,13 @@ class RTSP {
                 const str = data.toString();
                 const httpResponse = new HttpResponse_1.HttpResponse(str);
                 const line = httpResponse.line;
+                const headers = httpResponse.headers;
                 const code = line === null || line === void 0 ? void 0 : line.code;
                 const cseq = httpResponse.cseq;
                 if (cseq && cseq.toString() === this.cseq.toString()) {
                     if (code && code.toString() === "200") {
+                        const session = headers && headers["Session"];
+                        this.sessionId = session === null || session === void 0 ? void 0 : session.split(";")[0];
                         resolve(httpResponse);
                     }
                     else {
@@ -163,6 +167,23 @@ class RTSP {
         });
     }
     PLAY() {
+        return new Promise((resolve, reject) => {
+            const requestData = new HttpRequest_1.HttpRequest({
+                line: {
+                    method: "PLAY",
+                    path: "rtsp://192.168.50.123/trackID=1",
+                    protocol: this.protocolVersion
+                },
+                headers: {
+                    "CSeq": ++this.cseq,
+                    "Session": this.sessionId,
+                    "Range": "npt=0-",
+                    "User-Agent": this.userAgent,
+                }
+            });
+            const str = requestData.stringify();
+            this.tcpClient.send(str);
+        });
     }
 }
 exports.RTSP = RTSP;

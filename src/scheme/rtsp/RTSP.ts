@@ -3,6 +3,7 @@ import {HttpRequest} from "../../model/http/HttpRequest";
 import { URL } from "url";
 import {HttpResponse} from "../../model/http/HttpResponse";
 import {btoa} from "buffer";
+import {clearTimeout} from "timers";
 type RTSPVersion = "RTSP/1.0" | "RTSP/2.0";
 type RTPProtocol = "tcp" | "udp";
 type RTSPProtocol = "rtsp" | "rtspu" | "srtsp";
@@ -16,6 +17,7 @@ export interface RTSPOptions {
   path?: string;
   username?: string;
   password?: string;
+  timeout?: number;
 }
 export class RTSP {
   private readonly hostname: string;
@@ -35,6 +37,8 @@ export class RTSP {
   private username: string | undefined;
   private password: string | undefined;
   public sdp?: string;
+  private sessionId?: string;
+  private timeout: number;
   constructor(rtspOptions: RTSPOptions) {
     const path = rtspOptions.path;
     if(path) {
@@ -47,6 +51,7 @@ export class RTSP {
     } else {
       throw "Please specified hostname or path";
     }
+    this.timeout = rtspOptions.timeout || 6000;
     this.username = rtspOptions.username;
     this.password = rtspOptions.password;
     this.protocolVersion = rtspOptions.protocolVersion || "RTSP/1.0";
@@ -64,119 +69,113 @@ export class RTSP {
   async connect() {
     await this.tcpClient.open();
   }
-  OPTIONS() {
-    return new Promise((resolve, reject) => {
-      const requestData = new HttpRequest({
-        line: {
-          method: "OPTIONS",
-          path: this.path,
-          protocol: this.protocolVersion
-        },
-        headers: {
-          "CSeq": ++this.cseq,
-          "User-Agent": this.userAgent
-        }
-      });
-      const str = requestData.stringify();
-      const listener = (data?: any) => {
-        const str = data.toString();
-        const httpResponse = new HttpResponse(str);
-        const headers = httpResponse.headers;
-        const cseq = headers && headers["CSeq"];
-        if(cseq && cseq.toString() === this.cseq.toString()) {
-          const methods = headers["Public"];
-          this.supportedMethods = methods.split(/,\s*/);
-          this.tcpClient.off("data", listener);
-          resolve(httpResponse);
-        }
-      };
-      this.tcpClient.on("data", listener);
-      this.tcpClient.send(str);
-    })
-  }
-  DESCRIBE() {
-    return new Promise((resolve, reject) => {
-      const requestData = new HttpRequest({
-        line: {
-          method: "DESCRIBE",
-          path: this.path,
-          protocol: this.protocolVersion
-        },
-        headers: {
-          "Accept": "application/sdp",
-          "CSeq": ++this.cseq,
-          "User-Agent": this.userAgent
-        }
-      });
-      if(this.needAuthentication) {
-        const headers = requestData.headers;
-        if(headers)
-          headers["Authorization"] = `Basic ${btoa("admin:able123456")}`;
+  async OPTIONS() {
+    const httpRequest = new HttpRequest({
+      line: {
+        method: "OPTIONS",
+        path: this.path,
+        protocol: this.protocolVersion
+      },
+      headers: {
+        "CSeq": ++this.cseq,
+        "User-Agent": this.userAgent
       }
-      const str = requestData.stringify();
-      const listener = (data: any) => {
-        const str = data.toString();
-        const httpResponse = new HttpResponse(str);
-        const line = httpResponse.line;
-        const headers = httpResponse.headers;
-        const code = line?.code;
-        const cseq = httpResponse.cseq;
-        if(cseq && cseq.toString() === this.cseq.toString()) {
-          if(code && code.toString() === "401") {
-            this.needAuthentication = true;
-            const value = headers && headers["WWW-Authenticate"];
-            if(value) {
-              this.authenticationType = value;
-            }
-            this.tcpClient.off("data", listener);
-            reject(httpResponse);
-          }
-          if(code && code.toString() === "200") {
-            this.tcpClient.off("data", listener);
-            this.sdp = httpResponse.body;
-            resolve(httpResponse);
-          }
-        }
-      };
-      this.tcpClient.on("data", listener);
-      this.tcpClient.send(str);
-    })
+    });
+    const httpResponse = await this.request(httpRequest);
+    if(httpResponse && httpResponse.methods)
+      this.supportedMethods = httpResponse?.methods;
   }
-  SETUP() {
+  async DESCRIBE() {
+    const httpRequest = new HttpRequest({
+      line: {
+        method: "DESCRIBE",
+        path: this.path,
+        protocol: this.protocolVersion
+      },
+      headers: {
+        "Accept": "application/sdp",
+        "CSeq": ++this.cseq,
+        "User-Agent": this.userAgent,
+        "Authorization": this.needAuthentication ? `Basic ${btoa("admin:able123456")}` : undefined
+      }
+    });
+    try {
+      const httpResponse = await this.request(httpRequest);
+      this.sdp = httpResponse.body;
+    }catch (error) {
+      if(error instanceof HttpResponse && error?.code?.toString() === "401") {
+        this.needAuthentication = true;
+        const headers = error.headers;
+        this.authenticationType = headers && headers["WWW-Authenticate"];
+      }
+      throw error;
+    }
+  }
+  async SETUP() {
+    const httpRequest = new HttpRequest({
+      line: {
+        method: "SETUP",
+        path: "rtsp://192.168.50.123/trackID=1",
+        protocol: this.protocolVersion
+      },
+      headers: {
+        "CSeq": ++this.cseq,
+        // "Transport": "RTP/AVP/UDP;unicast;client_port=3056-3057",
+        "Transport": "RTP/AVP/TCP;unicast;interleaved=0-1",
+        "User-Agent": this.userAgent,
+        "Authorization": `Basic ${btoa("admin:able1234")}`
+      }
+    });
+    const httpResponse = await this.request(httpRequest);
+    const headers = httpResponse.headers;
+    const session = headers && headers["Session"];
+    this.sessionId = session?.split(";")[0];
+  }
+  PLAY() {
     return new Promise((resolve, reject) => {
       const requestData = new HttpRequest({
         line: {
-          method: "SETUP",
+          method: "PLAY",
           path: "rtsp://192.168.50.123/trackID=1",
           protocol: this.protocolVersion
         },
         headers: {
           "CSeq": ++this.cseq,
-          "Transport": "RTP/AVP;unicast;client_port=3056-3057",
+          "Session": this.sessionId,
+          "Range": "npt=0-",
           "User-Agent": this.userAgent,
-          "Authorization": `Basic ${btoa("admin:able1234")}`
         }
       });
       const str = requestData.stringify();
+      this.tcpClient.send(str);
+    });
+  }
+  request(httpRequest: HttpRequest): Promise<HttpResponse> {
+    return new Promise((resolve, reject) => {
       const listener = (data?: any) => {
-        const str = data.toString();
-        const httpResponse = new HttpResponse(str);
-        const line = httpResponse.line;
-        const code = line?.code;
-        const cseq = httpResponse.cseq;
-        if(cseq && cseq.toString() === this.cseq.toString()) {
+        const httpResponse = new HttpResponse(data.toString());
+        const requestCSeq = httpRequest.cseq;
+        const responseCSeq = httpResponse.cseq;
+        if(responseCSeq && requestCSeq.toString() === responseCSeq.toString()) {
+          const code = httpResponse.code;
           if(code && code.toString() === "200") {
+            clearTimeout(timer);
+            this.tcpClient.off("data", listener);
             resolve(httpResponse);
-          } else {
+          }
+          else {
+            clearTimeout(timer);
+            this.tcpClient.off("data", listener);
             reject(httpResponse);
           }
         }
       };
+      const timer = setTimeout(() => {
+        this.tcpClient.off("data", listener);
+        reject(`Request httpRequest.stringify(),but response timed out after ${this.timeout}ms`);
+      }, this.timeout);
       this.tcpClient.on("data", listener);
-      this.tcpClient.send(str);
+      this.tcpClient.send(httpRequest.stringify());
     });
-  }
-  PLAY() {
-
   }
 }
