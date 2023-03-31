@@ -1,7 +1,7 @@
 import {TCPClient} from "../../transport/TCPClient";
-import {HttpRequest} from "../../model/http/HttpRequest";
+import {HttpRequest} from "../../model/protocol/http/HttpRequest";
 import { URL } from "url";
-import {HttpResponse} from "../../model/http/HttpResponse";
+import {HttpResponse} from "../../model/protocol/http/HttpResponse";
 import {btoa} from "buffer";
 import {clearTimeout} from "timers";
 type RTSPVersion = "RTSP/1.0" | "RTSP/2.0";

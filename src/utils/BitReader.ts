@@ -1,20 +1,17 @@
 export class BitReader {
   private buffer: Buffer;
-  private byteOffset: number;
-  private bitOffset: number;
+  private offset: number;
   constructor(buffer: Buffer) {
     this.buffer = buffer;
-    this.byteOffset = 0;
-    this.bitOffset = 0;
+    this.offset = 0;
+  }
+  get byteOffset() {
+    return this.offset % 8;
   }
   readBit(): number {
     const byte = this.buffer.readUint8(this.byteOffset);
-    const bit = byte >> (7 - this.bitOffset) & 1;
-    this.bitOffset++;
-    if(this.bitOffset >= 8) {
-      this.bitOffset = 0;
-      this.byteOffset++;
-    }
+    const bit = byte >> (7 - this.offset % 8) & 1;
+    this.offset++;
     return bit;
   }
   readBits(length: number): number {
@@ -26,8 +23,7 @@ export class BitReader {
   }
   readByte(): number {
     const byte = this.buffer.readUint8(this.byteOffset);
-    this.byteOffset++;
-    this.bitOffset = 0;
+    this.offset += 8;
     return byte;
   }
   readBytes(): number[] {
@@ -52,14 +48,14 @@ export class BitReader {
       return val;
     }
   }
+  readBitRange(start: number, length: number) {
+    this.offset = start;
+    return this.readBits(length);
+  }
   readInt32() {
     const int = this.buffer.readInt32BE(this.byteOffset);
-    this.byteOffset++;
-    this.bitOffset = 0;
+    this.offset += 32
     return int;
-  }
-  readASCII(length: number) {
-
   }
 }
 
