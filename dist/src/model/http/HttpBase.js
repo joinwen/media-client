@@ -10,4 +10,4 @@ class HttpBase {
     }
 }
 exports.HttpBase = HttpBase;
-//# sourceMappingURL=HttpBase.js.map
+//# sourceMappingURL=HttpPacket.js.map

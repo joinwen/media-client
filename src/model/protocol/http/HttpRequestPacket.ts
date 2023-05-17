@@ -1,4 +1,6 @@
 /**
+ * @see https://www.rfc-editor.org/rfc/rfc2616
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP
  * 一个典型的 HTTP 请求内容如下所示：
  * 1. 请求行
  * GET /example HTTP/1.1
@@ -18,7 +20,7 @@
  *   "age": 30
  * }
  */
-import {HttpBase} from "./HttpBase";
+import {HttpPacket} from "./HttpPacket";
 export interface HttpRequestOptions {
   line: {
     method: string,
@@ -30,7 +32,7 @@ export interface HttpRequestOptions {
   },
   body?: any
 }
-export class HttpRequest extends HttpBase {
+export class HttpRequestPacket extends HttpPacket {
   private readonly httpRequestOptions: HttpRequestOptions;
   constructor(httpRequestOptions: HttpRequestOptions | string) {
     super();

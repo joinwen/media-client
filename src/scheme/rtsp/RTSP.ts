@@ -1,7 +1,7 @@
 import {TCPClient} from "../../transport/TCPClient";
-import {HttpRequest} from "../../model/protocol/http/HttpRequest";
+import {HttpRequestPacket} from "../../model/protocol/http/HttpRequestPacket";
 import { URL } from "url";
-import {HttpResponse} from "../../model/protocol/http/HttpResponse";
+import {HttpResponsePacket} from "../../model/protocol/http/HttpResponsePacket";
 import {btoa} from "buffer";
 import {clearTimeout} from "timers";
 type RTSPVersion = "RTSP/1.0" | "RTSP/2.0";
@@ -70,7 +70,7 @@ export class RTSP {
     await this.tcpClient.open();
   }
   async OPTIONS() {
-    const httpRequest = new HttpRequest({
+    const httpRequest = new HttpRequestPacket({
       line: {
         method: "OPTIONS",
         path: this.path,
@@ -86,7 +86,7 @@ export class RTSP {
       this.supportedMethods = httpResponse?.methods;
   }
   async DESCRIBE() {
-    const httpRequest = new HttpRequest({
+    const httpRequest = new HttpRequestPacket({
       line: {
         method: "DESCRIBE",
         path: this.path,
@@ -103,7 +103,7 @@ export class RTSP {
       const httpResponse = await this.request(httpRequest);
       this.sdp = httpResponse.body;
     }catch (error) {
-      if(error instanceof HttpResponse && error?.code?.toString() === "401") {
+      if(error instanceof HttpResponsePacket && error?.code?.toString() === "401") {
         this.needAuthentication = true;
         const headers = error.headers;
         this.authenticationType = headers && headers["WWW-Authenticate"];
@@ -112,7 +112,7 @@ export class RTSP {
     }
   }
   async SETUP() {
-    const httpRequest = new HttpRequest({
+    const httpRequest = new HttpRequestPacket({
       line: {
         method: "SETUP",
         path: "rtsp://192.168.50.123/trackID=1",
@@ -133,7 +133,7 @@ export class RTSP {
   }
   PLAY() {
     return new Promise((resolve, reject) => {
-      const requestData = new HttpRequest({
+      const requestData = new HttpRequestPacket({
         line: {
           method: "PLAY",
           path: "rtsp://192.168.50.123/trackID=1",
@@ -150,10 +150,10 @@ export class RTSP {
       this.tcpClient.send(str);
     });
   }
-  request(httpRequest: HttpRequest): Promise<HttpResponse> {
+  request(httpRequest: HttpRequestPacket): Promise<HttpResponsePacket> {
     return new Promise((resolve, reject) => {
       const listener = (data?: any) => {
-        const httpResponse = new HttpResponse(data.toString());
+        const httpResponse = new HttpResponsePacket(data.toString());
         const requestCSeq = httpRequest.cseq;
         const responseCSeq = httpResponse.cseq;
         if(responseCSeq && requestCSeq.toString() === responseCSeq.toString()) {

@@ -83,4 +83,4 @@ class HttpRequest extends HttpBase_1.HttpBase {
     }
 }
 exports.HttpRequest = HttpRequest;
-//# sourceMappingURL=HttpRequest.js.map
+//# sourceMappingURL=HttpRequestPacket.js.map

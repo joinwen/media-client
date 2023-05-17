@@ -86,4 +86,4 @@ class HttpResponse extends HttpBase_1.HttpBase {
     }
 }
 exports.HttpResponse = HttpResponse;
-//# sourceMappingURL=HttpResponse.js.map
+//# sourceMappingURL=HttpResponsePacket.js.map

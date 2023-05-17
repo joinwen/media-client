@@ -1,4 +1,6 @@
 /**
+ * @see https://www.rfc-editor.org/rfc/rfc2616
+ * @see https://developer.mozilla.org/en-US/docs/Web/HTTP
  * 一个典型的 HTTP 响应如下所示：
  * 1. 响应行：
  * HTTP/1.1 200 OK
@@ -22,7 +24,7 @@
  * </body>
  * </html>
  */
-import {HttpBase} from "./HttpBase";
+import {HttpPacket} from "./HttpPacket";
 export interface HttpResponseOptions {
   line: {
     protocol: string,
@@ -34,7 +36,7 @@ export interface HttpResponseOptions {
   },
   body: any
 }
-export class HttpResponse extends HttpBase {
+export class HttpResponsePacket extends HttpPacket {
   private httpResponseOptions: HttpResponseOptions;
   constructor(httpResponseOptions: HttpResponseOptions | string) {
     super();
